@@ -8,7 +8,7 @@ DOMAIN = "nh_nicehash"
 
 _LOGGER = logging.getLogger(__name__)
 
-class SolarSunsynkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class NiceHashConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
@@ -60,7 +60,7 @@ class SolarSunsynkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.hass.async_add_executor_job(check_credentials)
 
-config_entries.HANDLERS.register(DOMAIN)(SolarSunsynkConfigFlow)
+config_entries.HANDLERS.register(DOMAIN)(NiceHashConfigFlow)
 
 
 

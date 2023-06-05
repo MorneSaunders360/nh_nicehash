@@ -43,13 +43,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Create sensor entities and add them
     entities = []
     for result_key in coordinator.data.keys():
-        entity = SolarSunSynkSensor(coordinator, result_key,device)
+        entity = NiceHashSensor(coordinator, result_key,device)
         entities.append(entity)
 
     async_add_entities(entities)
 
 
-class SolarSunSynkSensor(SensorEntity):
+class NiceHashSensor(SensorEntity):
     """Representation of a sensor entity for Solar Sunsynk data."""
     def __init__(self, coordinator, result_key,device):
         """Initialize the sensor."""
@@ -61,7 +61,7 @@ class SolarSunSynkSensor(SensorEntity):
     def device_info(self):
         """Return device information."""
         return {
-            "identifiers": {(DOMAIN, "solar_sunsynk")},
+            "identifiers": {(DOMAIN, "nh_nicehash")},
             "name": self.device.name,
             "manufacturer": self.device.manufacturer,
             "model": self.device.model,
@@ -72,7 +72,7 @@ class SolarSunSynkSensor(SensorEntity):
     @property
     def unique_id(self):
         """Return a unique ID."""
-        return f"sunsynk_{self.result_key}"
+        return f"nicehash_{self.result_key}"
 
 
 
