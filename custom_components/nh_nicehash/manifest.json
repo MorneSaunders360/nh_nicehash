@@ -1,0 +1,12 @@
+{
+    "domain": "nh_nicehash",
+    "name": "NiceHash API",
+    "documentation": "https://github.com/MorneSaunders360/nh_nicehash/blob/main/README.md",
+    "dependencies": [],
+    "requirements": ["requests"],
+    "config_flow": true,
+    "iot_class": "cloud_polling",
+    "version": "1.0.0",
+    "codeowners": ["@MorneSaunders360"]
+  }
+  
