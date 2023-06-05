@@ -1,0 +1,2 @@
+# nh_nicehash
+ 
