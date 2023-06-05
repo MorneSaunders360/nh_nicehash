@@ -2,11 +2,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.components.sensor import SensorEntity
 from functools import partial
 from datetime import timedelta
-import aiohttp
-import async_timeout
-import json
 import logging
-import time
 import re
 import nicehash
 # Constants
