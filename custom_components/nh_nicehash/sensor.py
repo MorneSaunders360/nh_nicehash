@@ -4,7 +4,8 @@ from functools import partial
 from datetime import timedelta
 import logging
 import re
-import nicehash
+from .nicehash import private_api
+import json
 # Constants
 DOMAIN = "nh_nicehash"
 _LOGGER = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         hass,
         _LOGGER,
         name="sensor",
-        update_method=partial(fetch_data, config_entry),
+        update_method=partial(fetch_data, config_entry,hass),
         update_interval=timedelta(seconds=UPDATE_INTERVAL),
     )
     
@@ -39,7 +40,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Create sensor entities and add them
     entities = []
     for result_key in coordinator.data.keys():
-        entity = NiceHashSensor(coordinator, result_key,device)
+        entity = NiceHashSensor(coordinator, result_key,device,coordinator.data.get('btcAddress'))
         entities.append(entity)
 
     async_add_entities(entities)
@@ -47,12 +48,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 class NiceHashSensor(SensorEntity):
     """Representation of a sensor entity for Solar Sunsynk data."""
-    def __init__(self, coordinator, result_key,device):
+    def __init__(self, coordinator, result_key,device,id):
         """Initialize the sensor."""
         self.coordinator = coordinator
         self.result_key = result_key
         self.device = device 
-    
+        self.id = id
     @property
     def device_info(self):
         """Return device information."""
@@ -70,17 +71,10 @@ class NiceHashSensor(SensorEntity):
         """Return a unique ID."""
         return f"nicehash_{self.result_key}"
 
-
-
     @property
     def name(self):
         """Return the name of the sensor."""
-        return self._format_key_to_title(self.result_key)
-
-    def _format_key_to_title(self, key):
-        """Format the key in the format 'totalPower' to 'Total Power'."""
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', key)
-        return re.sub('([a-z0-9])([A-Z])', r'\1 \2', s1).title()
+        return f"nicehash_{self.id}_{self.result_key}"
 
     @property
     def state(self):
@@ -91,17 +85,45 @@ class NiceHashSensor(SensorEntity):
         """Update the sensor."""
         await self.coordinator.async_request_refresh()
 
-async def fetch_data(session, config_entry):
+
+async def fetch_data(config_entry, hass):
     host = 'https://api2.nicehash.com'
-    organisation_id =config_entry.data["organisation_id"]
+    organisation_id = config_entry.data["organisation_id"]
     key = config_entry.data["key"]
     secret = config_entry.data["secret"]
-    private_api = nicehash.private_api(host, organisation_id, key, secret)
-    rigs = private_api.get_rigs()
-    # Combine all the plant data into a single dictionary
-    combined_data = {}
-    for info in rigs:
-        info = {k: str(v)[:255] for k, v in info.items()}
-        combined_data.update(info)
-            
+    api_instance = private_api(host, organisation_id, key, secret, hass, False)
+    rigsResponse = await api_instance.get_rigs()
+    user = json.dumps(rigsResponse)
+    data = json.loads(user)
+    # Retrieve and format data
+    btcAddress = data['btcAddress']
+    totalProfitability = data['totalProfitability']
+    totalRigs = data['totalRigs']
+    totalDevices = data['totalDevices']
+    totalProfitabilityLocal = data['totalProfitabilityLocal']
+
+    combined_data = {
+        'btcAddress': btcAddress,
+        'totalProfitability': totalProfitability,
+        'totalRigs': totalRigs,
+        'totalDevices': totalDevices,
+        'totalProfitabilityLocal': totalProfitabilityLocal,
+    }
+
+    # Loop over each mining rig and fetch additional data
+    for item in data['miningRigs']:
+        rigId = item['rigId']
+        workerName = item['v4']['mmv']['workerName']
+        minerStatus = item['minerStatus']
+
+        # Update the combined_data dictionary with separate entities
+        combined_data[f'{rigId}_workerName'] = workerName
+        combined_data[f'{rigId}_minerStatus'] = minerStatus
+
     return combined_data
+
+
+
+
+
+
