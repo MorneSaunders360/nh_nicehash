@@ -7,13 +7,15 @@ import json
 from hashlib import sha256
 import optparse
 import sys
-
+from homeassistant.core import HomeAssistant
+from functools import partial
 
 class public_api:
 
-    def __init__(self, host, verbose=False):
+    def __init__(self, host,hass: HomeAssistant, verbose=False):
         self.host = host
         self.verbose = verbose
+        self.hass = hass
 
     def request(self, method, path, query, body):
         url = self.host + path
@@ -78,15 +80,15 @@ class public_api:
 
 class private_api:
 
-    def __init__(self, host, organisation_id, key, secret, verbose=False):
+    def __init__(self, host, organisation_id, key, secret, hass: HomeAssistant, verbose=False):
         self.key = key
         self.secret = secret
         self.organisation_id = organisation_id
         self.host = host
         self.verbose = verbose
+        self.hass = hass
 
-    def request(self, method, path, query, body):
-
+    async def request(self, method, path, query, body):
         xtime = self.get_epoch_ms_from_now()
         xnonce = str(uuid.uuid4())
 
@@ -123,9 +125,6 @@ class private_api:
             'X-Request-Id': str(uuid.uuid4())
         }
 
-        s = requests.Session()
-        s.headers = headers
-
         url = self.host + path
         if query:
             url += '?' + query
@@ -133,10 +132,18 @@ class private_api:
         if self.verbose:
             print(method, url)
 
-        if body:
-            response = s.request(method, url, data=body_json)
-        else:
-            response = s.request(method, url)
+        response = await self.hass.async_add_executor_job(
+            partial(self._send_request, method, url, headers, body)
+        )
+        return response
+
+    def _send_request(self, method, url, headers, body):
+        with requests.Session() as s:
+            s.headers = headers
+            if body:
+                response = s.request(method, url, data=json.dumps(body))
+            else:
+                response = s.request(method, url)
 
         if response.status_code == 200:
             return response.json()
@@ -160,17 +167,17 @@ class private_api:
             raise Exception('Settings for algorithm not found in algo_response parameter')
 
         return algo_setting
-    def get_rigs(self):
-            return self.request('GET', '/main/api/v2/mining/rigs', '', None)
+    async def get_rigs(self):
+        return await self.request('GET', '/main/api/v2/mining/rigs', '', None)
+
     def set_rig_status(self, rigId, action):
             pool_data = {
             "rigId": rigId,
             "action": action
             }
             return self.request('POST', '/main/api/v2/mining/rigs/status2/', '', pool_data)
-    def get_accounts(self):
-        return self.request('GET', '/main/api/v2/accounting/accounts2/', '', None)
-   
+    async def get_accounts(self):
+        return await self.request('GET', '/main/api/v2/accounting/accounts2/', '', None)
     def get_accounts_for_currency(self, currency):
         return self.request('GET', '/main/api/v2/accounting/account2/' + currency, '', None)
 
@@ -299,33 +306,3 @@ class private_api:
     def cancel_exchange_order(self, market, order_id):
         query = "market={}&orderId={}".format(market, order_id)
         return self.request('DELETE', '/exchange/api/v2/order', query, None)
-
-
-if __name__ == "__main__":
-    parser = optparse.OptionParser()
-
-    parser.add_option('-b', '--base_url', dest="base", help="Api base url", default="https://api2.nicehash.com")
-    parser.add_option('-o', '--organization_id', dest="org", help="Organization id")
-    parser.add_option('-k', '--key', dest="key", help="Api key")
-    parser.add_option('-s', '--secret', dest="secret", help="Secret for api key")
-    parser.add_option('-m', '--method', dest="method", help="Method for request", default="GET")
-    parser.add_option('-p', '--path', dest="path", help="Path for request", default="/")
-    parser.add_option('-q', '--params', dest="params", help="Parameters for request")
-    parser.add_option('-d', '--body', dest="body", help="Body for request")
-
-    options, args = parser.parse_args()
-
-    private_api = private_api(options.base, options.org, options.key, options.secret)
-
-    params = ''
-    if options.params is not None:
-        params = options.params
-
-    try:
-        response = private_api.request(options.method, options.path, params, options.body)
-    except Exception as ex:
-        print("Unexpected error:", ex)
-        exit(1)
-
-    print(response)
-    exit(0)
