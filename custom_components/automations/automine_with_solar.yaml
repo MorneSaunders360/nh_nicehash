@@ -1,0 +1,36 @@
+alias: Auto Mine
+description: ""
+trigger:
+  - platform: state
+    entity_id:
+      - sensor.sunsynk_18166_soc
+condition: []
+action:
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: sensor.sunsynk_18166_soc
+            above: 72
+          - condition: state
+            entity_id: >-
+              sensor.nicehash_3nmkjdliptw2zqhiku2j7vyhsbdbvm7pwn_0_cryxri9uzvwl6bgc3u0t2g_minerstatus
+            state: STOPPED
+        sequence:
+          - service: nh_nicehash.setrigstatus
+            data:
+              rigId: 0-cRyxRi9UzVWL6BGc3u0t2g
+              action: START
+      - conditions:
+          - condition: numeric_state
+            entity_id: sensor.sunsynk_18166_soc
+            below: 70
+          - condition: state
+            entity_id: >-
+              sensor.nicehash_3nmkjdliptw2zqhiku2j7vyhsbdbvm7pwn_0_cryxri9uzvwl6bgc3u0t2g_minerstatus
+            state: MINING
+        sequence:
+          - service: nh_nicehash.setrigstatus
+            data:
+              rigId: 0-cRyxRi9UzVWL6BGc3u0t2g
+              action: STOP
+mode: restart
