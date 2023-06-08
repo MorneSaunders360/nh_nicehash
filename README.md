@@ -2,6 +2,7 @@
 
 A Home Assistant integration to track your Nicehash rigs.
 
+![image](https://github.com/MorneSaunders360/nh_nicehash/assets/60499349/ebb87258-8f87-46fd-ac39-bb77fad827d1)
 
 # HACS Install 
 1. Access HACS: Open Home Assistant and click on HACS in the sidebar.
