@@ -14,9 +14,9 @@ DEVICE_INFO = {
     "name": "Nicehash",
     "manufacturer": "MorneSaunders360",
     "model": "Nicehash API",
-    "sw_version": "1.0",
+    "sw_version": "1.0.1",
 }
-UPDATE_INTERVAL = 10
+UPDATE_INTERVAL = 60
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up sensors from config entry."""
     # Create the data update coordinator
