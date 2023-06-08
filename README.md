@@ -15,7 +15,7 @@ A Home Assistant integration to track your Nicehash rigs.
 9. Select "NiceHash Api" and "Download this repository with HACS"
 10. Once downloaded, go to settings, then devices and services
 11. Click on add intergration and search for 'NiceHash Api'
-12. Follow the prompt with user name and then password, wait for 2 minutes and your data should be loaded
+12. Follow the prompt with Organisation Id ,Key and Secret wait for 1 minutes and your data should be loaded
 
 13. Setup cards and automations
 
