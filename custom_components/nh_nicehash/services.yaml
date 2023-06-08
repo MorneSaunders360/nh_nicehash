@@ -1,0 +1,19 @@
+setrigstatus:
+  name: Set Rig Status
+  description: >
+    Set Rig Status
+  fields:
+    rigId:
+      name: rigId
+      description: Your Rig Id
+      required: true
+      example: 0-cRyxRi9UzVWL6BGc3u0t2g
+      selector:
+        text:
+    action:
+      name: action
+      description: Action like 'START' Or 'STOP'.
+      required: true
+      example: START
+      selector:
+        text:

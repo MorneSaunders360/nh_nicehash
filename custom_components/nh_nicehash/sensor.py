@@ -45,15 +45,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     async_add_entities(entities)
 
-
 class NiceHashSensor(SensorEntity):
-    """Representation of a sensor entity for Solar Sunsynk data."""
-    def __init__(self, coordinator, result_key,device,id):
+    """Representation of a sensor entity for NiceHash data."""
+
+    def __init__(self, coordinator, result_key, device, id):
         """Initialize the sensor."""
         self.coordinator = coordinator
         self.result_key = result_key
-        self.device = device 
+        self.device = device
         self.id = id
+
     @property
     def device_info(self):
         """Return device information."""
@@ -65,11 +66,11 @@ class NiceHashSensor(SensorEntity):
             "sw_version": self.device.sw_version,
             "via_device": (DOMAIN, self.device.id),
         }
-        
+
     @property
     def unique_id(self):
         """Return a unique ID."""
-        return f"nicehash_{self.result_key}"
+        return f"nicehash_{self.id}_{self.result_key}"
 
     @property
     def name(self):
@@ -81,49 +82,105 @@ class NiceHashSensor(SensorEntity):
         """Return the state of the sensor."""
         return self.coordinator.data[self.result_key]
 
+    @property
+    def device_class(self):
+        """Return the device class of the sensor."""
+        if "maxTemp" in self.result_key:
+            return "temperature"
+        elif "Temperature" in self.result_key:
+            return "temperature"
+        elif "voltage" in self.result_key:
+            return "voltage"
+        elif "Memory" in self.result_key:
+            return "frequency"
+        elif "Power usage" in self.result_key:
+            return "power"
+        elif "Power Limit" in self.result_key:
+            return "power_factor"
+        elif "clock" in self.result_key:
+            return "frequency"
+        elif "speed" in self.result_key:
+            return "power_factor"
+        elif "Load" in self.result_key:
+            return "power_factor"
+        elif self.result_key == "totalProfitability":
+            return "monetary"
+        elif self.result_key in ["unpaidAmount", "totalBalance"]:
+            return "monetary"
+        else:
+            return None
+
+
     async def async_update(self):
         """Update the sensor."""
         await self.coordinator.async_request_refresh()
 
-
 async def fetch_data(config_entry, hass):
-    host = 'https://api2.nicehash.com'
-    organisation_id = config_entry.data["organisation_id"]
-    key = config_entry.data["key"]
-    secret = config_entry.data["secret"]
-    api_instance = private_api(host, organisation_id, key, secret, hass, False)
-    rigsResponse = await api_instance.get_rigs()
-    user = json.dumps(rigsResponse)
-    data = json.loads(user)
-    # Retrieve and format data
-    btcAddress = data['btcAddress']
-    totalProfitability = data['totalProfitability']
-    totalRigs = data['totalRigs']
-    totalDevices = data['totalDevices']
-    totalProfitabilityLocal = data['totalProfitabilityLocal']
+    try:
+        host = 'https://api2.nicehash.com'
+        organisation_id = config_entry.data["organisation_id"]
+        key = config_entry.data["key"]
+        secret = config_entry.data["secret"]
+        api_instance = private_api(host, organisation_id, key, secret, hass, False)
 
-    combined_data = {
-        'btcAddress': btcAddress,
-        'totalProfitability': totalProfitability,
-        'totalRigs': totalRigs,
-        'totalDevices': totalDevices,
-        'totalProfitabilityLocal': totalProfitabilityLocal,
-    }
+        rigsResponse = await api_instance.get_rigs()
+        my_accounts = await api_instance.get_accounts_for_currency("BTC")
 
-    # Loop over each mining rig and fetch additional data
-    for item in data['miningRigs']:
-        rigId = item['rigId']
-        workerName = item['v4']['mmv']['workerName']
-        minerStatus = item['minerStatus']
+        rigsResponse_json = json.dumps(rigsResponse)
+        my_accounts_json = json.dumps(my_accounts)
 
-        # Update the combined_data dictionary with separate entities
-        combined_data[f'{rigId}_workerName'] = workerName
-        combined_data[f'{rigId}_minerStatus'] = minerStatus
+        data = json.loads(rigsResponse_json)
+        totalBalance = json.loads(my_accounts_json)['totalBalance']
 
-    return combined_data
+        btcAddress = data['btcAddress']
+        totalProfitability = data['totalProfitability']
+        totalRigs = data['totalRigs']
+        totalDevices = data['totalDevices']
+        totalProfitabilityLocal = data['totalProfitabilityLocal']
+        unpaidAmount = data['unpaidAmount']
+
+        combined_data = {
+            'btcAddress': btcAddress,
+            'totalProfitability': totalProfitability,
+            'totalRigs': totalRigs,
+            'totalDevices': totalDevices,
+            'totalProfitabilityLocal': totalProfitabilityLocal,
+            'unpaidAmount': unpaidAmount,
+            'totalBalance': totalBalance
+        }
+
+        # Loop over each mining rig and fetch additional data
+        for item in data['miningRigs']:
+            rigId = item['rigId']
+            workerName = item['v4']['mmv']['workerName']
+            minerStatus = item['minerStatus']
+
+            # Find the maximum temperature across all devices in the rig
+            temps = [int(device['odv'][0]['value']) for device in item['v4']['devices']]
+            max_temp = max(temps)
+            combined_data[f'{rigId}_maxTemp'] = max_temp
+
+            # Add device information to the combined_data dictionary
+            for device in item['v4']['devices']:
+                deviceId = device['dsv']['id']
+                deviceName = device['dsv']['name']
+                combined_data[f'{rigId}_{deviceId}_deviceName'] = deviceName
+
+                # Add odv data to the combined_data dictionary
+                for odv_item in device['odv']:
+                    key = odv_item['key']
+                    if key not in ['ELP profile','ELP profile ID','Fan profile','Fan profile ID','OC profile ID','OC profile']:
+                        value = odv_item['value']
+                        unit = odv_item['unit']
+                        combined_data[f'{rigId}_{deviceId}_{key}'] = f'{value} {unit}'
 
 
+            combined_data[f'{rigId}'] = rigId
+            combined_data[f'{rigId}_workerName'] = workerName
+            combined_data[f'{rigId}_minerStatus'] = minerStatus
 
+        return combined_data
 
-
-
+    except Exception as e:
+        _LOGGER.error("Error fetching data from NiceHash API: %s", e)
+        return None
