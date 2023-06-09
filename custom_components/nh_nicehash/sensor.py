@@ -38,24 +38,26 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         config_entry_id=config_entry.entry_id,
         **DEVICE_INFO,
     )
-
+    rig_device_pairs = []  # This needs to be populated with your (rigId, deviceId) pairs
     # Create sensor entities and add them
     entities = []
     for result_key in coordinator.data.keys():
-        entity = NiceHashSensor(coordinator, result_key,device,coordinator.data.get('btcAddress'))
+        entity = NiceHashSensor(coordinator, result_key, device, coordinator.data.get('btcAddress'), config_entry)
         entities.append(entity)
+
 
     async_add_entities(entities)
 
 class NiceHashSensor(SensorEntity):
     """Representation of a sensor entity for NiceHash data."""
 
-    def __init__(self, coordinator, result_key, device, id):
+    def __init__(self, coordinator, result_key, device, id,config_entry):
         """Initialize the sensor."""
         self.coordinator = coordinator
         self.result_key = result_key
         self.device = device
         self.id = id
+        self.config_entry = config_entry
 
     @property
     def device_info(self):
@@ -114,7 +116,33 @@ class NiceHashSensor(SensorEntity):
         else:
             return None
 
-
+    @property
+    def state_class(self):
+        """Return the state class of the sensor."""
+        # The keys from combined_data
+        keys_combined_data = [
+            'btcAddress',
+            'totalProfitability',
+            'totalRigs',
+            'totalDevices',
+            'totalProfitabilityLocal',
+            'unpaidAmount',
+            'unpaidAmount_' + self.config_entry.data["currency"],
+            'totalBalance',
+            'totalBalance_' + self.config_entry.data["currency"],
+        ]
+        # Prefixes from rigId and deviceId in combined_data
+        prefixes_combined_data = [
+            'maxTemp',
+            'deviceName',
+            'workerName',
+            'minerStatus',
+        ]
+        # Check if result_key is in keys_combined_data or starts with a prefix from prefixes_combined_data
+        if (self.result_key in keys_combined_data) or any(self.result_key.startswith(prefix) for prefix in prefixes_combined_data):
+            return "measurement"
+        else:
+            return None
     async def async_update(self):
         """Update the sensor."""
         await self.coordinator.async_request_refresh()
