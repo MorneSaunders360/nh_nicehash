@@ -6,6 +6,8 @@ import logging
 import re
 from .nicehash import private_api
 import json
+import aiohttp
+import asyncio
 # Constants
 DOMAIN = "nh_nicehash"
 _LOGGER = logging.getLogger(__name__)
@@ -14,7 +16,7 @@ DEVICE_INFO = {
     "name": "Nicehash",
     "manufacturer": "MorneSaunders360",
     "model": "Nicehash API",
-    "sw_version": "1.0.1",
+    "sw_version": "1.0.2",
 }
 UPDATE_INTERVAL = 60
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -121,6 +123,7 @@ async def fetch_data(config_entry, hass):
         organisation_id = config_entry.data["organisation_id"]
         key = config_entry.data["key"]
         secret = config_entry.data["secret"]
+        currency = config_entry.data["currency"]
         api_instance = private_api(host, organisation_id, key, secret, hass, False)
 
         rigsResponse = await api_instance.get_rigs()
@@ -138,7 +141,15 @@ async def fetch_data(config_entry, hass):
         totalDevices = data['totalDevices']
         totalProfitabilityLocal = data['totalProfitabilityLocal']
         unpaidAmount = data['unpaidAmount']
-
+        # Fetch conversion rate from CoinConvert API
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://api.coinconvert.net/convert/btc/{currency}?amount=1") as response:
+                conversion_data = await response.json()
+        
+        
+        conversion_rate = conversion_data[currency.upper()]
+        totalBalance_converted = float(totalBalance) * conversion_rate if totalBalance else None
+        unpaidAmount_converted = float(unpaidAmount) * conversion_rate if unpaidAmount else None
         combined_data = {
             'btcAddress': btcAddress,
             'totalProfitability': totalProfitability,
@@ -146,9 +157,10 @@ async def fetch_data(config_entry, hass):
             'totalDevices': totalDevices,
             'totalProfitabilityLocal': totalProfitabilityLocal,
             'unpaidAmount': unpaidAmount,
-            'totalBalance': totalBalance
+            'unpaidAmount_' + currency: unpaidAmount_converted,
+            'totalBalance': totalBalance,
+            'totalBalance_' + currency: totalBalance_converted
         }
-
         # Loop over each mining rig and fetch additional data
         for item in data['miningRigs']:
             rigId = item['rigId']
