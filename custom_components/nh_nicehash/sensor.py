@@ -16,7 +16,7 @@ DEVICE_INFO = {
     "name": "Nicehash",
     "manufacturer": "MorneSaunders360",
     "model": "Nicehash API",
-    "sw_version": "1.0.2",
+    "sw_version": "1.0.1",
 }
 UPDATE_INTERVAL = 60
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -105,9 +105,7 @@ class NiceHashSensor(SensorEntity):
             return "power_factor"
         elif "Load" in self.result_key:
             return "power_factor"
-        elif self.result_key == "totalProfitability":
-            return "monetary"
-        elif self.result_key in ["unpaidAmount", "totalBalance"]:
+        elif self.result_key in ["unpaidAmount", "totalBalance","totalBalance_","unpaidAmount_","totalProfitability"]:
             return "monetary"
         else:
             return None
