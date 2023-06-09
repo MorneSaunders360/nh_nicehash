@@ -7,12 +7,13 @@
         "data": {
           "organisation_id": "Organisation Id",
           "key": "Key",
-          "secret": "Secret"
+          "secret": "Secret",
+          "currency":"Currency"
         }
       }
     },
     "error": {
-      "empty_credentials": "The Organisation,Key and Secret fields cannot be empty.",
+      "empty_credentials": "The username and password fields cannot be empty.",
       "invalid_auth": "Failed to authenticate with NiceHash. Please check your Organisation Id,Key and Secret."
     },
     "abort": {
