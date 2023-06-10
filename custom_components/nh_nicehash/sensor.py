@@ -16,7 +16,7 @@ DEVICE_INFO = {
     "name": "Nicehash",
     "manufacturer": "MorneSaunders360",
     "model": "Nicehash API",
-    "sw_version": "1.0.2",
+    "sw_version": "1.0.3",
 }
 UPDATE_INTERVAL = 60
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -51,7 +51,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class NiceHashSensor(SensorEntity):
     """Representation of a sensor entity for NiceHash data."""
 
-    def __init__(self, coordinator, result_key, device, id,config_entry):
+    def __init__(self, coordinator, result_key, device, id, config_entry):
         """Initialize the sensor."""
         self.coordinator = coordinator
         self.result_key = result_key
@@ -84,7 +84,19 @@ class NiceHashSensor(SensorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        return self.coordinator.data[self.result_key]
+        if self.result_key == 'unpaidAmount_' + self.config_entry.data["currency"]:
+            unpaid_amount_converted = self.coordinator.data[self.result_key]
+            return round(unpaid_amount_converted, 2) if unpaid_amount_converted is not None else None
+        else:
+            return self.coordinator.data[self.result_key]
+
+    @property
+    def unit_of_measurement(self):
+        """Return the unit of measurement."""
+        if self.result_key in ['unpaidAmount_' + self.config_entry.data["currency"], 'totalBalance_' + self.config_entry.data["currency"]]:
+            return self.config_entry.data["currency"]
+        else:
+            return None
 
     @property
     def device_class(self):
@@ -143,6 +155,7 @@ class NiceHashSensor(SensorEntity):
             return "measurement"
         else:
             return None
+
     async def async_update(self):
         """Update the sensor."""
         await self.coordinator.async_request_refresh()
@@ -181,16 +194,17 @@ async def fetch_data(config_entry, hass):
         totalBalance_converted = float(totalBalance) * conversion_rate if totalBalance else None
         unpaidAmount_converted = float(unpaidAmount) * conversion_rate if unpaidAmount else None
         combined_data = {
-            'btcAddress': btcAddress,
-            'totalProfitability': totalProfitability,
-            'totalRigs': totalRigs,
-            'totalDevices': totalDevices,
-            'totalProfitabilityLocal': totalProfitabilityLocal,
-            'unpaidAmount': unpaidAmount,
-            'unpaidAmount_' + currency: unpaidAmount_converted,
-            'totalBalance': totalBalance,
-            'totalBalance_' + currency: totalBalance_converted
+        'btcAddress': btcAddress,
+        'totalProfitability': totalProfitability,
+        'totalRigs': totalRigs,
+        'totalDevices': totalDevices,
+        'totalProfitabilityLocal': totalProfitabilityLocal,
+        'unpaidAmount': unpaidAmount,
+        'unpaidAmount_' + currency: round(unpaidAmount_converted, 2) if unpaidAmount_converted is not None else None,
+        'totalBalance': totalBalance,
+        'totalBalance_' + currency: round(totalBalance_converted, 2) if totalBalance_converted is not None else None
         }
+
         # Loop over each mining rig and fetch additional data
         for item in data['miningRigs']:
             rigId = item['rigId']
@@ -225,4 +239,4 @@ async def fetch_data(config_entry, hass):
 
     except Exception as e:
         _LOGGER.error("Error fetching data from NiceHash API: %s", e)
-        return None
+        raise UpdateFailed(f"Error fetching data from NiceHash API: {e}")
