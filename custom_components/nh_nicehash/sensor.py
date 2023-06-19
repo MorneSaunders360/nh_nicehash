@@ -16,7 +16,7 @@ DEVICE_INFO = {
     "name": "Nicehash",
     "manufacturer": "MorneSaunders360",
     "model": "Nicehash API",
-    "sw_version": "1.0.3",
+    "sw_version": "1.0.4",
 }
 UPDATE_INTERVAL = 60
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -136,6 +136,7 @@ class NiceHashSensor(SensorEntity):
             'btcAddress',
             'totalProfitability',
             'totalRigs',
+            'devicesStatuses',
             'totalDevices',
             'totalProfitabilityLocal',
             'unpaidAmount',
@@ -174,7 +175,6 @@ async def fetch_data(config_entry, hass):
 
         rigsResponse_json = json.dumps(rigsResponse)
         my_accounts_json = json.dumps(my_accounts)
-
         data = json.loads(rigsResponse_json)
         totalBalance = json.loads(my_accounts_json)['totalBalance']
 
@@ -184,6 +184,7 @@ async def fetch_data(config_entry, hass):
         totalDevices = data['totalDevices']
         totalProfitabilityLocal = data['totalProfitabilityLocal']
         unpaidAmount = data['unpaidAmount']
+        devicesStatuses = data['devicesStatuses']
         # Fetch conversion rate from CoinConvert API
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://api.coinconvert.net/convert/btc/{currency}?amount=1") as response:
@@ -197,6 +198,7 @@ async def fetch_data(config_entry, hass):
         'btcAddress': btcAddress,
         'totalProfitability': totalProfitability,
         'totalRigs': totalRigs,
+        'devicesStatuses': list(devicesStatuses.keys())[0],
         'totalDevices': totalDevices,
         'totalProfitabilityLocal': totalProfitabilityLocal,
         'unpaidAmount': unpaidAmount,
@@ -212,9 +214,13 @@ async def fetch_data(config_entry, hass):
             minerStatus = item['minerStatus']
 
             # Find the maximum temperature across all devices in the rig
+            
             temps = [int(device['odv'][0]['value']) for device in item['v4']['devices']]
             max_temp = max(temps)
             combined_data[f'{rigId}_maxTemp'] = max_temp
+            combined_data[f'{rigId}'] = rigId
+            combined_data[f'{rigId}_workerName'] = workerName
+            combined_data[f'{rigId}_minerStatus'] = minerStatus
 
             # Add device information to the combined_data dictionary
             for device in item['v4']['devices']:
@@ -231,9 +237,6 @@ async def fetch_data(config_entry, hass):
                         combined_data[f'{rigId}_{deviceId}_{key}'] = f'{value} {unit}'
 
 
-            combined_data[f'{rigId}'] = rigId
-            combined_data[f'{rigId}_workerName'] = workerName
-            combined_data[f'{rigId}_minerStatus'] = minerStatus
 
         return combined_data
 
