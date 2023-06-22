@@ -1,14 +1,7 @@
 from homeassistant import config_entries, core
+from .const import Set_Rig_Status_SCHEMA,DOMAIN
 from .nicehash import private_api
-import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
-DOMAIN = "nh_nicehash"
-Set_Rig_Status_SCHEMA = vol.Schema(
-    {
-        vol.Required('rigId'): cv.string,
-        vol.Required('action'): cv.string,
-    }
-)
+
 async def async_setup(hass, config):
     return True
 

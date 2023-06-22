@@ -5,8 +5,6 @@ import hmac
 import requests
 import json
 from hashlib import sha256
-import optparse
-import sys
 from homeassistant.core import HomeAssistant
 from functools import partial
 

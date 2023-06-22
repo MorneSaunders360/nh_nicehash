@@ -1,12 +1,7 @@
-import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from .nicehash import private_api
-
-DOMAIN = "nh_nicehash"
-
-_LOGGER = logging.getLogger(__name__)
-
+from .const import DOMAIN,HOSTURL
 class NiceHashConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
@@ -22,11 +17,11 @@ class NiceHashConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             organisation_id = user_input.get("organisation_id")
             key = user_input.get("key")
             secret = user_input.get("secret")
-            currency = user_input.get("currency")
             if not organisation_id or not key or not secret:
                 errors["base"] = "empty_credentials"
             else:
-                valid = await self._validate_credentials(organisation_id, key,secret)
+                api_instance = private_api(HOSTURL, organisation_id, key, secret, self.hass,False)
+                valid = await self._validate_credentials(api_instance)
                 if valid:
                     return self.async_create_entry(title="Nicehash", data=user_input)
                 else:
@@ -321,12 +316,10 @@ class NiceHashConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-    async def _validate_credentials(self, organisation_id, key,secret):
+    async def _validate_credentials(self, api_instance):
         async def check_credentials():
             validAuth = False
             try:
-                host = 'https://api2.nicehash.com'
-                api_instance = private_api(host, organisation_id, key, secret, hass,False)
                 json_response = await api_instance.get_accounts()
                 if json_response != 401:
                     validAuth = True
