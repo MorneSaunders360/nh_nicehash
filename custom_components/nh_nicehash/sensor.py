@@ -49,12 +49,12 @@ class NiceHashSensor(SensorEntity):
     @property
     def unique_id(self):
         """Return a unique ID."""
-        return f"{self.device.name} {self.result_key}"
+        return f"{self.device.name}-{self.result_key}"
 
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{self.device.name} {self.result_key}"
+        return f"{self.device.name}-{self.result_key}"
 
     @property
     def state(self):
