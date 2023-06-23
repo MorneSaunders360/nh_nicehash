@@ -16,5 +16,5 @@ DEVICE_INFO = {
     "name": "Nicehash",
     "manufacturer": "MorneSaunders360",
     "model": "Nicehash API",
-    "sw_version": "1.0.6",
+    "sw_version": "1.0.10",
 }

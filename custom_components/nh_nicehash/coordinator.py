@@ -66,33 +66,40 @@ async def fetch_data(config_entry, hass):
         }
 
         # Loop over each mining rig and fetch additional data
-        # for item in data['miningRigs']:
-        #     rigId = item['rigId']
-        #     workerName = item['v4']['mmv']['workerName']
-        #     minerStatus = item['minerStatus']
+        for item in data['miningRigs']:
+            rigId = item['rigId']
+            workerName = item['v4']['mmv']['workerName']
+            minerStatus = item['minerStatus']
 
-        #     # Find the maximum temperature across all devices in the rig
+            # Find the maximum temperature across all devices in the rig
             
-        #     temps = [int(device['odv'][0]['value']) for device in item['v4']['devices']]
-        #     max_temp = max(temps)
-        #     combined_data[f'{rigId}_maxTemp'] = max_temp
-        #     combined_data[f'{rigId}'] = rigId
-        #     combined_data[f'{rigId}_workerName'] = workerName
-        #     combined_data[f'{rigId}_minerStatus'] = minerStatus
+            temps = [int(device['odv'][0]['value']) for device in item['v4']['devices']]
+            max_temp = max(temps)
+            combined_data[f'miningRig_{rigId}'] = {
+                'maxTemp': max_temp,
+                'rigId': rigId,
+                'workerName': workerName,
+                'minerStatus': minerStatus,
+            }
+            # Add device information to the combined_data dictionary
+            i = 1
+            for device in item['v4']['devices']:
+                deviceId = device['dsv']['id']
+                deviceName = device['dsv']['name']
+                i += 1
+                combined_data[f'miningRigDevice_{deviceId}'] = {
+                    'deviceId': deviceId,
+                    'deviceName': deviceName + f"({i})",
+                    'ParentName': workerName,
+                }
+                for odv_item in device['odv']:
+                    key = odv_item['key']
+                    if key not in ['ELP profile','ELP profile ID','Fan profile','Fan profile ID','OC profile ID','OC profile']:
+                        value = odv_item['value']
+                        unit = odv_item['unit']
+                        # add odv_item key directly to the miningRigDevice dictionary
+                        combined_data[f'miningRigDevice_{deviceId}'][f'{key}'] = f'{value} {unit}'
 
-        #     # Add device information to the combined_data dictionary
-        #     for device in item['v4']['devices']:
-        #         deviceId = device['dsv']['id']
-        #         deviceName = device['dsv']['name']
-        #         combined_data[f'{rigId}_{deviceId}_deviceName'] = deviceName
-
-        #         # Add odv data to the combined_data dictionary
-        #         for odv_item in device['odv']:
-        #             key = odv_item['key']
-        #             if key not in ['ELP profile','ELP profile ID','Fan profile','Fan profile ID','OC profile ID','OC profile']:
-        #                 value = odv_item['value']
-        #                 unit = odv_item['unit']
-        #                 combined_data[f'{rigId}_{deviceId}_{key}'] = f'{value} {unit}'
 
 
 
