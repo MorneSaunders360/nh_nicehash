@@ -76,32 +76,7 @@ class NiceHashSensor(SensorEntity):
     @property
     def device_class(self):
         """Return the device class of the sensor."""
-        if "maxTemp" in self.result_key:
-            return "temperature"
-        elif "Temperature" in self.result_key:
-            return "temperature"
-        elif "voltage" in self.result_key:
-            return "voltage"
-        elif "Memory" in self.result_key:
-            return "frequency"
-        elif "Power usage" in self.result_key:
-            return "power"
-        elif "Power Limit" in self.result_key:
-            return "power_factor"
-        elif "clock" in self.result_key:
-            return "frequency"
-        elif "speed" in self.result_key:
-            return "power_factor"
-        elif "Load" in self.result_key:
-            return "power_factor"
-        elif "unpaidAmount" in self.result_key:
-            return "monetary"
-        elif "totalBalance" in self.result_key:
-            return "monetary"
-        elif "totalProfitability" in self.result_key:
-            return "monetary"
-        else:
-            return None
+        return None
 
     @property
     def state_class(self):
